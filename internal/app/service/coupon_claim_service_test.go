@@ -19,12 +19,12 @@ func TestCouponClaimService_ClaimCoupon(t *testing.T) {
 	claimCouponTest := func(
 		name string,
 		req dto.ClaimCouponRequest,
-		setupMocks func(*MockCouponRepositoryRedeemer, *MockCouponClaimRepositoryWriter),
+		setupMocks func(*MockCouponRepositoryClaimer, *MockCouponClaimRepositoryWriter),
 		wantErr bool,
 		expectedErr error,
 	) func(t *testing.T) {
 		return func(t *testing.T) {
-			mockRedeemer := NewMockCouponRepositoryRedeemer(t)
+			mockRedeemer := NewMockCouponRepositoryClaimer(t)
 			mockWriter := NewMockCouponClaimRepositoryWriter(t)
 			setupMocks(mockRedeemer, mockWriter)
 
@@ -46,7 +46,7 @@ func TestCouponClaimService_ClaimCoupon(t *testing.T) {
 	t.Run("success", claimCouponTest(
 		"success",
 		dto.ClaimCouponRequest{CouponName: "PROMO10", UserID: "user1"},
-		func(mr *MockCouponRepositoryRedeemer, mw *MockCouponClaimRepositoryWriter) {
+		func(mr *MockCouponRepositoryClaimer, mw *MockCouponClaimRepositoryWriter) {
 			mr.EXPECT().
 				WithTransaction(mock.Anything, mock.Anything).
 				Run(func(ctx context.Context, txFunc func(context.Context, *sqlx.Tx) error) {
@@ -81,7 +81,7 @@ func TestCouponClaimService_ClaimCoupon(t *testing.T) {
 	t.Run("no_stock", claimCouponTest(
 		"no_stock",
 		dto.ClaimCouponRequest{CouponName: "PROMO10", UserID: "user1"},
-		func(mr *MockCouponRepositoryRedeemer, mw *MockCouponClaimRepositoryWriter) {
+		func(mr *MockCouponRepositoryClaimer, mw *MockCouponClaimRepositoryWriter) {
 			mr.EXPECT().
 				WithTransaction(mock.Anything, mock.Anything).
 				Run(func(ctx context.Context, txFunc func(context.Context, *sqlx.Tx) error) {
@@ -105,7 +105,7 @@ func TestCouponClaimService_ClaimCoupon(t *testing.T) {
 	t.Run("already_claimed", claimCouponTest(
 		"already_claimed",
 		dto.ClaimCouponRequest{CouponName: "PROMO10", UserID: "user1"},
-		func(mr *MockCouponRepositoryRedeemer, mw *MockCouponClaimRepositoryWriter) {
+		func(mr *MockCouponRepositoryClaimer, mw *MockCouponClaimRepositoryWriter) {
 			expectedErr := errors.New("coupon already claimed")
 
 			mr.EXPECT().
@@ -135,7 +135,7 @@ func TestCouponClaimService_ClaimCoupon(t *testing.T) {
 	t.Run("db_error_get_coupon", claimCouponTest(
 		"db_error_get_coupon",
 		dto.ClaimCouponRequest{CouponName: "PROMO10", UserID: "user1"},
-		func(mr *MockCouponRepositoryRedeemer, mw *MockCouponClaimRepositoryWriter) {
+		func(mr *MockCouponRepositoryClaimer, mw *MockCouponClaimRepositoryWriter) {
 			mr.EXPECT().
 				WithTransaction(mock.Anything, mock.Anything).
 				Run(func(ctx context.Context, txFunc func(context.Context, *sqlx.Tx) error) {
