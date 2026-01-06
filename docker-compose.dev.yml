@@ -1,0 +1,52 @@
+services:
+  app:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_signal: SIGKILL
+    restart: "on-failure:5"
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+    volumes:
+      - ./db/migrations:/migrations
+    entrypoint: ["migrate", "-path", "/migrations", "-database",  "postgres://postgres@postgres:5432/coupon_system_${APP_ENV:-development}?sslmode=disable&search_path=public"]
+    command: ["up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    volumes:
+      - "./postgres-data:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: postgres
+      POSTGRES_DB: coupon_system_development
+    ports:
+      - "5431:5432"
+    stop_signal: SIGKILL
+    healthcheck:
+      test: pg_isready
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6-load-test
+    volumes:
+      - ./tests/load:/scripts
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres-data:
