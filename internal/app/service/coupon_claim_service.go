@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type CouponRepositoryRedeemer interface {
+type CouponRepositoryClaimer interface {
 	WithTransaction(ctx context.Context,
 		txFunc func(context.Context, *sqlx.Tx) error,
 	) error
@@ -22,14 +22,14 @@ type CouponClaimRepositoryWriter interface {
 }
 
 type CouponClaimService struct {
-	couponRepositoryRedeemer    CouponRepositoryRedeemer
+	couponRepositoryClaimer     CouponRepositoryClaimer
 	couponClaimRepositoryWriter CouponClaimRepositoryWriter
 }
 
-func NewCouponClaimService(couponRepositoryRedeemer CouponRepositoryRedeemer,
+func NewCouponClaimService(couponRepositoryClaimer CouponRepositoryClaimer,
 	couponClaimRepositoryWriter CouponClaimRepositoryWriter) *CouponClaimService {
 	return &CouponClaimService{
-		couponRepositoryRedeemer:    couponRepositoryRedeemer,
+		couponRepositoryClaimer:     couponRepositoryClaimer,
 		couponClaimRepositoryWriter: couponClaimRepositoryWriter,
 	}
 }
@@ -40,8 +40,8 @@ func (s *CouponClaimService) ClaimCoupon(ctx context.Context, req dto.ClaimCoupo
 		UserID:     req.UserID,
 	}
 
-	err := s.couponRepositoryRedeemer.WithTransaction(ctx, func(ctx context.Context, tx *sqlx.Tx) error {
-		coupon, err := s.couponRepositoryRedeemer.GetCouponForUpdateTx(ctx, tx, couponClaim.CouponName)
+	err := s.couponRepositoryClaimer.WithTransaction(ctx, func(ctx context.Context, tx *sqlx.Tx) error {
+		coupon, err := s.couponRepositoryClaimer.GetCouponForUpdateTx(ctx, tx, couponClaim.CouponName)
 		if err != nil {
 			return fmt.Errorf("failed to get coupon for update: %w", err)
 		}
@@ -55,7 +55,7 @@ func (s *CouponClaimService) ClaimCoupon(ctx context.Context, req dto.ClaimCoupo
 			return fmt.Errorf("failed to create coupon claim: %w", err)
 		}
 
-		err = s.couponRepositoryRedeemer.SubstractRemainingAmountTx(ctx, tx, couponClaim.CouponName, 1)
+		err = s.couponRepositoryClaimer.SubstractRemainingAmountTx(ctx, tx, couponClaim.CouponName, 1)
 		if err != nil {
 			return fmt.Errorf("failed to substract remaining amount: %w", err)
 		}
